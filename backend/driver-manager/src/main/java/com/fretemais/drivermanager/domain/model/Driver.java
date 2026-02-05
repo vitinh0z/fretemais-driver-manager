@@ -25,10 +25,15 @@ public class Driver {
     private String name;
     @Enumerated(EnumType.STRING)
     private VehicleType vehicleType;
+
     @CPF
+    @Column(unique = true)
     private String cpf;
+    @Column(unique = true)
     private String cnh;
+    @Column(unique = true)
     private String phoneNumber;
+    @Column(unique = true)
     private String email;
     private boolean available;
 }
