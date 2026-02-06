@@ -36,11 +36,10 @@ public class Driver {
     @CPF
     @Column(unique = true)
     private String cpf;
-
     @Column(unique = true)
     private String cnh;
     @Column(unique = true)
-    private String phone;
+    private String phoneNumber;
     @Column(unique = true)
     private String email;
     private boolean available;
