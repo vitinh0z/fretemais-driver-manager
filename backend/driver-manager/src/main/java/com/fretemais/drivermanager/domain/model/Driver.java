@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.validator.constraints.br.CPF;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -22,9 +23,15 @@ public class Driver {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(unique = true)
     private String name;
+
     @Enumerated(EnumType.STRING)
-    private VehicleType vehicleType;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "driver_vehicle_types",
+            joinColumns =
+    @JoinColumn(name = "driver_id"))
+    private List<VehicleType> vehicleType;
 
     @CPF
     @Column(unique = true)
@@ -36,4 +43,6 @@ public class Driver {
     @Column(unique = true)
     private String email;
     private boolean available;
+    private String city;
+    private String state;
 }
