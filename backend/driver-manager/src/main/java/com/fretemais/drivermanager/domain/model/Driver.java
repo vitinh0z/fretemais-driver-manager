@@ -41,8 +41,6 @@ public class Driver {
     @Column(unique = true)
     private String email;
     private boolean available;
-    @Column(unique = true)
     private String city;
-    @Column(unique = true)
     private String state;
 }
