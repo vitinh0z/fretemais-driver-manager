@@ -2,10 +2,7 @@ package com.fretemais.drivermanager.domain.model;
 
 import com.fretemais.drivermanager.domain.enums.VehicleType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.util.List;
@@ -14,6 +11,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
+@Builder
 @Table(name = "drivers")
 @AllArgsConstructor
 @NoArgsConstructor
@@ -43,6 +41,8 @@ public class Driver {
     @Column(unique = true)
     private String email;
     private boolean available;
+    @Column(unique = true)
     private String city;
+    @Column(unique = true)
     private String state;
 }
