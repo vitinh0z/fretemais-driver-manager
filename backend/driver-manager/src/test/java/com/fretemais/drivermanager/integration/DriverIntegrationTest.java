@@ -102,7 +102,9 @@ class DriverIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content", hasSize(1)))
-                    .andExpect(jsonPath("$.content[0].id").value(driverId.toString()));
+                    .andExpect(jsonPath("$.content[0].id").value(driverId.toString()))
+                    .andExpect(jsonPath("$.content[0].cpf").doesNotExist())
+                    .andExpect(jsonPath("$.content[0].cnh").doesNotExist());
 
             // 4. ATUALIZAR motorista
             String updateJson = """
@@ -198,7 +200,7 @@ class DriverIntegrationTest {
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(duplicateEmailJson))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isConflict());
 
             assertThat(driverRepository.count()).isEqualTo(1);
         }
@@ -232,7 +234,7 @@ class DriverIntegrationTest {
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(duplicateCpfJson))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isConflict());
 
             assertThat(driverRepository.count()).isEqualTo(1);
         }
@@ -266,7 +268,7 @@ class DriverIntegrationTest {
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(duplicateCnhJson))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isConflict());
 
             assertThat(driverRepository.count()).isEqualTo(1);
         }
@@ -499,7 +501,7 @@ class DriverIntegrationTest {
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(updateJson))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isConflict());
         }
     }
 
@@ -539,7 +541,7 @@ class DriverIntegrationTest {
             mockMvc.perform(delete("/api/drivers/{id}", nonExistentId)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isNotFound());
         }
     }
 

@@ -2,10 +2,14 @@ package com.fretemais.drivermanager.application.services;
 
 import com.fretemais.drivermanager.application.dtos.DriverRequestDTO;
 import com.fretemais.drivermanager.application.dtos.DriverResponseDTO;
+import com.fretemais.drivermanager.application.dtos.DriverSummaryDTO;
 import com.fretemais.drivermanager.application.mappers.DriverMapper;
 import com.fretemais.drivermanager.domain.enums.VehicleType;
 import com.fretemais.drivermanager.domain.model.Driver;
+import com.fretemais.drivermanager.infrastructure.exceptions.DuplicateResourceException;
+import com.fretemais.drivermanager.infrastructure.exceptions.ResourceNotFoundException;
 import com.fretemais.drivermanager.infrastructure.persistence.DriverRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -129,7 +133,7 @@ class DriverServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> driverService.create(validRequestDTO))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(DuplicateResourceException.class)
                     .hasMessage("Email já cadastrado");
 
             verify(driverRepository).existsByEmail(validRequestDTO.email());
@@ -145,7 +149,7 @@ class DriverServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> driverService.create(validRequestDTO))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(DuplicateResourceException.class)
                     .hasMessage("CPF já cadastrado");
 
             verify(driverRepository, never()).save(any());
@@ -161,7 +165,7 @@ class DriverServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> driverService.create(validRequestDTO))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(DuplicateResourceException.class)
                     .hasMessage("CNH já cadastrada");
 
             verify(driverRepository, never()).save(any());
@@ -172,6 +176,21 @@ class DriverServiceTest {
     @DisplayName("Testes do método list()")
     class ListTests {
 
+        private DriverSummaryDTO summaryDTO;
+
+        @BeforeEach
+        void setUp() {
+            summaryDTO = DriverSummaryDTO.builder()
+                    .id(driverId)
+                    .name("João Silva")
+                    .phone("11999999999")
+                    .city("São Paulo")
+                    .state("SP")
+                    .vehicleTypes(List.of(VehicleType.CAR, VehicleType.MOTORCYCLE))
+                    .available(true)
+                    .build();
+        }
+
         @Test
         @DisplayName("Deve listar motoristas com paginação")
         void shouldListDriversWithPagination() {
@@ -180,10 +199,10 @@ class DriverServiceTest {
             Page<Driver> driverPage = new PageImpl<>(List.of(driver), pageable, 1);
 
             when(driverRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(driverPage);
-            when(driverMapper.toResponse(driver)).thenReturn(responseDTO);
+            when(driverMapper.toSummary(driver)).thenReturn(summaryDTO);
 
             // Act
-            Page<DriverResponseDTO> result = driverService.list(null, null, null, null, pageable);
+            Page<DriverSummaryDTO> result = driverService.list(null, null, null, null, pageable);
 
             // Assert
             assertThat(result).isNotNull();
@@ -201,10 +220,10 @@ class DriverServiceTest {
             Page<Driver> driverPage = new PageImpl<>(List.of(driver), pageable, 1);
 
             when(driverRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(driverPage);
-            when(driverMapper.toResponse(driver)).thenReturn(responseDTO);
+            when(driverMapper.toSummary(driver)).thenReturn(summaryDTO);
 
             // Act
-            Page<DriverResponseDTO> result = driverService.list("João", null, null, null, pageable);
+            Page<DriverSummaryDTO> result = driverService.list("João", null, null, null, pageable);
 
             // Assert
             assertThat(result).isNotNull();
@@ -221,10 +240,10 @@ class DriverServiceTest {
             Page<Driver> driverPage = new PageImpl<>(List.of(driver), pageable, 1);
 
             when(driverRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(driverPage);
-            when(driverMapper.toResponse(driver)).thenReturn(responseDTO);
+            when(driverMapper.toSummary(driver)).thenReturn(summaryDTO);
 
             // Act
-            Page<DriverResponseDTO> result = driverService.list(null, "SP", null, null, pageable);
+            Page<DriverSummaryDTO> result = driverService.list(null, "SP", null, null, pageable);
 
             // Assert
             assertThat(result).isNotNull();
@@ -241,10 +260,10 @@ class DriverServiceTest {
             Page<Driver> driverPage = new PageImpl<>(List.of(driver), pageable, 1);
 
             when(driverRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(driverPage);
-            when(driverMapper.toResponse(driver)).thenReturn(responseDTO);
+            when(driverMapper.toSummary(driver)).thenReturn(summaryDTO);
 
             // Act
-            Page<DriverResponseDTO> result = driverService.list(null, null, "São Paulo", null, pageable);
+            Page<DriverSummaryDTO> result = driverService.list(null, null, "São Paulo", null, pageable);
 
             // Assert
             assertThat(result).isNotNull();
@@ -261,10 +280,10 @@ class DriverServiceTest {
             Page<Driver> driverPage = new PageImpl<>(List.of(driver), pageable, 1);
 
             when(driverRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(driverPage);
-            when(driverMapper.toResponse(driver)).thenReturn(responseDTO);
+            when(driverMapper.toSummary(driver)).thenReturn(summaryDTO);
 
             // Act
-            Page<DriverResponseDTO> result = driverService.list(null, null, null, List.of(VehicleType.CAR), pageable);
+            Page<DriverSummaryDTO> result = driverService.list(null, null, null, List.of(VehicleType.CAR), pageable);
 
             // Assert
             assertThat(result).isNotNull();
@@ -283,7 +302,7 @@ class DriverServiceTest {
             when(driverRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(emptyPage);
 
             // Act
-            Page<DriverResponseDTO> result = driverService.list(null, null, null, null, pageable);
+            Page<DriverSummaryDTO> result = driverService.list(null, null, null, null, pageable);
 
             // Assert
             assertThat(result).isNotNull();
@@ -323,7 +342,7 @@ class DriverServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> driverService.getById(nonExistentId))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Motorista não encontrado");
 
             verify(driverRepository).findById(nonExistentId);
@@ -358,7 +377,7 @@ class DriverServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> driverService.deleteById(nonExistentId))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Motorista não encontrado");
 
             verify(driverRepository).findById(nonExistentId);
@@ -471,7 +490,7 @@ class DriverServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> driverService.updateById(driverId, updateRequestDTO))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(DuplicateResourceException.class)
                     .hasMessage("Email já cadastrado");
 
             verify(driverRepository, never()).save(any());
@@ -497,7 +516,7 @@ class DriverServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> driverService.updateById(driverId, newCpfRequest))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(DuplicateResourceException.class)
                     .hasMessage("CPF já cadastrado");
 
             verify(driverRepository, never()).save(any());
@@ -523,7 +542,7 @@ class DriverServiceTest {
 
             // Act & Assert
             assertThatThrownBy(() -> driverService.updateById(driverId, newCnhRequest))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(DuplicateResourceException.class)
                     .hasMessage("CNH já cadastrada");
 
             verify(driverRepository, never()).save(any());
@@ -538,7 +557,7 @@ class DriverServiceTest {
 
 
             assertThatThrownBy(() -> driverService.updateById(nonExistentId, updateRequestDTO))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Motorista não encontrado");
 
             verify(driverRepository).findById(nonExistentId);
