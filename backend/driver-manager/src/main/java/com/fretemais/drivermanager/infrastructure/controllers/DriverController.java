@@ -1,5 +1,6 @@
 package com.fretemais.drivermanager.infrastructure.controllers;
 
+import com.fretemais.drivermanager.application.dtos.DriverSummaryDTO;
 import com.fretemais.drivermanager.application.dtos.DriverRequestDTO;
 import com.fretemais.drivermanager.application.dtos.DriverResponseDTO;
 import com.fretemais.drivermanager.application.services.DriverService;
@@ -30,7 +31,7 @@ public class DriverController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<DriverResponseDTO>> list(
+    public ResponseEntity<Page<DriverSummaryDTO>> list(
             @RequestParam(required = false) String text,
             @RequestParam(required = false) String state,
             @RequestParam(required = false) String city,
