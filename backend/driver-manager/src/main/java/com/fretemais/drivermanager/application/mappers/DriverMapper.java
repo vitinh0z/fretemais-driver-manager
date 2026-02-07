@@ -1,5 +1,6 @@
 package com.fretemais.drivermanager.application.mappers;
 
+import com.fretemais.drivermanager.application.dtos.DriverSummaryDTO;
 import com.fretemais.drivermanager.application.dtos.DriverRequestDTO;
 import com.fretemais.drivermanager.application.dtos.DriverResponseDTO;
 import com.fretemais.drivermanager.domain.model.Driver;
@@ -34,6 +35,20 @@ public class DriverMapper {
                 .phone(driver.getPhoneNumber())
                 .cpf(driver.getCpf())
                 .cnh(driver.getCnh())
+                .city(driver.getCity())
+                .state(driver.getState())
+                .available(driver.isAvailable())
+                .vehicleTypes(driver.getVehicleType())
+                .build();
+    }
+
+    public DriverSummaryDTO toSummary(Driver driver) {
+        if (driver == null) return null;
+
+        return DriverSummaryDTO.builder()
+                .id(driver.getId())
+                .name(driver.getName())
+                .phone(driver.getPhoneNumber())
                 .city(driver.getCity())
                 .state(driver.getState())
                 .available(driver.isAvailable())
