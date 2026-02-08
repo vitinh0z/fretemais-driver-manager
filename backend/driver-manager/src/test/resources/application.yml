@@ -6,6 +6,11 @@ spring:
     username: sa
     password:
 
+  # Virtual Threads (Project Loom) - melhor performance para I/O
+  threads:
+    virtual:
+      enabled: true
+
   h2:
     console:
       enabled: false
