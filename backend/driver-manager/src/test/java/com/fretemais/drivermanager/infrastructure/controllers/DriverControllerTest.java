@@ -2,8 +2,11 @@ package com.fretemais.drivermanager.infrastructure.controllers;
 
 import com.fretemais.drivermanager.application.dtos.DriverRequestDTO;
 import com.fretemais.drivermanager.application.dtos.DriverResponseDTO;
+import com.fretemais.drivermanager.application.dtos.DriverSummaryDTO;
 import com.fretemais.drivermanager.application.services.DriverService;
 import com.fretemais.drivermanager.domain.enums.VehicleType;
+import com.fretemais.drivermanager.infrastructure.exceptions.ResourceNotFoundException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -315,12 +318,27 @@ class DriverControllerTest {
     @DisplayName("GET /api/drivers - Listar Motoristas")
     class ListDriversTests {
 
+        private DriverSummaryDTO summaryDTO;
+
+        @BeforeEach
+        void setUp() {
+            summaryDTO = DriverSummaryDTO.builder()
+                    .id(driverId)
+                    .name("João Silva")
+                    .phone("11999999999")
+                    .city("São Paulo")
+                    .state("SP")
+                    .available(true)
+                    .vehicleTypes(List.of(VehicleType.CAR, VehicleType.MOTORCYCLE))
+                    .build();
+        }
+
         @Test
         @WithMockUser
         @DisplayName("Deve listar motoristas com paginação padrão")
         void shouldListDriversWithDefaultPagination() throws Exception {
-            Page<DriverResponseDTO> page = new PageImpl<>(
-                    List.of(responseDTO),
+            Page<DriverSummaryDTO> page = new PageImpl<>(
+                    List.of(summaryDTO),
                     PageRequest.of(0, 10),
                     1
             );
@@ -333,6 +351,8 @@ class DriverControllerTest {
                     .andExpect(jsonPath("$.content", hasSize(1)))
                     .andExpect(jsonPath("$.content[0].id").value(driverId.toString()))
                     .andExpect(jsonPath("$.content[0].name").value("João Silva"))
+                    .andExpect(jsonPath("$.content[0].cpf").doesNotExist()) // Verify security
+                    .andExpect(jsonPath("$.content[0].cnh").doesNotExist()) // Verify security
                     .andExpect(jsonPath("$.totalElements").value(1))
                     .andExpect(jsonPath("$.totalPages").value(1));
 
@@ -343,8 +363,8 @@ class DriverControllerTest {
         @WithMockUser
         @DisplayName("Deve listar motoristas com filtro de texto")
         void shouldListDriversWithTextFilter() throws Exception {
-            Page<DriverResponseDTO> page = new PageImpl<>(
-                    List.of(responseDTO),
+            Page<DriverSummaryDTO> page = new PageImpl<>(
+                    List.of(summaryDTO),
                     PageRequest.of(0, 10),
                     1
             );
@@ -364,8 +384,8 @@ class DriverControllerTest {
         @WithMockUser
         @DisplayName("Deve listar motoristas com filtro de estado")
         void shouldListDriversWithStateFilter() throws Exception {
-            Page<DriverResponseDTO> page = new PageImpl<>(
-                    List.of(responseDTO),
+            Page<DriverSummaryDTO> page = new PageImpl<>(
+                    List.of(summaryDTO),
                     PageRequest.of(0, 10),
                     1
             );
@@ -385,8 +405,8 @@ class DriverControllerTest {
         @WithMockUser
         @DisplayName("Deve listar motoristas com filtro de cidade")
         void shouldListDriversWithCityFilter() throws Exception {
-            Page<DriverResponseDTO> page = new PageImpl<>(
-                    List.of(responseDTO),
+            Page<DriverSummaryDTO> page = new PageImpl<>(
+                    List.of(summaryDTO),
                     PageRequest.of(0, 10),
                     1
             );
@@ -406,8 +426,8 @@ class DriverControllerTest {
         @WithMockUser
         @DisplayName("Deve listar motoristas com filtro de veículos")
         void shouldListDriversWithVehicleFilter() throws Exception {
-            Page<DriverResponseDTO> page = new PageImpl<>(
-                    List.of(responseDTO),
+            Page<DriverSummaryDTO> page = new PageImpl<>(
+                    List.of(summaryDTO),
                     PageRequest.of(0, 10),
                     1
             );
@@ -427,7 +447,7 @@ class DriverControllerTest {
         @WithMockUser
         @DisplayName("Deve retornar página vazia quando não há motoristas")
         void shouldReturnEmptyPageWhenNoDrivers() throws Exception {
-            Page<DriverResponseDTO> emptyPage = new PageImpl<>(
+            Page<DriverSummaryDTO> emptyPage = new PageImpl<>(
                     List.of(),
                     PageRequest.of(0, 10),
                     0
@@ -448,8 +468,8 @@ class DriverControllerTest {
         @WithMockUser
         @DisplayName("Deve listar motoristas com paginação customizada")
         void shouldListDriversWithCustomPagination() throws Exception {
-            Page<DriverResponseDTO> page = new PageImpl<>(
-                    List.of(responseDTO),
+            Page<DriverSummaryDTO> page = new PageImpl<>(
+                    List.of(summaryDTO),
                     PageRequest.of(1, 5),
                     6
             );
@@ -490,15 +510,15 @@ class DriverControllerTest {
 
         @Test
         @WithMockUser
-        @DisplayName("Deve retornar 500 quando motorista não existe")
-        void shouldReturn500WhenDriverNotExists() throws Exception {
+        @DisplayName("Deve retornar 404 quando motorista não existe")
+        void shouldReturn404WhenDriverNotExists() throws Exception {
             UUID nonExistentId = UUID.randomUUID();
             when(driverService.getById(nonExistentId))
-                    .thenThrow(new IllegalArgumentException("Motorista não encontrado"));
+                    .thenThrow(new ResourceNotFoundException("Motorista não encontrado"));
 
             mockMvc.perform(get("/api/drivers/{id}", nonExistentId)
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isNotFound());
 
             verify(driverService).getById(nonExistentId);
         }
@@ -583,17 +603,17 @@ class DriverControllerTest {
 
         @Test
         @WithMockUser
-        @DisplayName("Deve retornar 500 quando motorista não existe na atualização")
-        void shouldReturn500WhenDriverNotExistsOnUpdate() throws Exception {
+        @DisplayName("Deve retornar 404 quando motorista não existe na atualização")
+        void shouldReturn404WhenDriverNotExistsOnUpdate() throws Exception {
             UUID nonExistentId = UUID.randomUUID();
             when(driverService.updateById(eq(nonExistentId), any(DriverRequestDTO.class)))
-                    .thenThrow(new IllegalArgumentException("Motorista não encontrado"));
+                    .thenThrow(new ResourceNotFoundException("Motorista não encontrado"));
 
             mockMvc.perform(put("/api/drivers/{id}", nonExistentId)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(validRequestJson))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isNotFound());
 
             verify(driverService).updateById(eq(nonExistentId), any(DriverRequestDTO.class));
         }
@@ -619,16 +639,16 @@ class DriverControllerTest {
 
         @Test
         @WithMockUser
-        @DisplayName("Deve retornar 500 quando motorista não existe ao deletar")
-        void shouldReturn500WhenDriverNotExistsOnDelete() throws Exception {
+        @DisplayName("Deve retornar 404 quando motorista não existe ao deletar")
+        void shouldReturn404WhenDriverNotExistsOnDelete() throws Exception {
             UUID nonExistentId = UUID.randomUUID();
-            doThrow(new IllegalArgumentException("Motorista não encontrado"))
+            doThrow(new ResourceNotFoundException("Motorista não encontrado"))
                     .when(driverService).deleteById(nonExistentId);
 
             mockMvc.perform(delete("/api/drivers/{id}", nonExistentId)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isNotFound());
 
             verify(driverService).deleteById(nonExistentId);
         }
