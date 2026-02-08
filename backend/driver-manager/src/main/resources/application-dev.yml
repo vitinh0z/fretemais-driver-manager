@@ -31,3 +31,7 @@ logging:
     root: INFO
     com.fretemais.challenge.drivermanager: DEBUG
     org.springframework.security: DEBUG
+
+jwt:
+  secret: minha-chave-secreta-desenvolvimento-jwt-256!
+

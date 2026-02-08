@@ -23,6 +23,9 @@ spring:
       name: test
       password: test
 
+jwt:
+  secret: minha-chave-secreta-para-teste-jwt-256bits!
+
 logging:
   level:
     root: WARN
