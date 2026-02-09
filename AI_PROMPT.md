@@ -856,6 +856,16 @@ Crie um documento AI_JOURNEY.md detalhando:
 
 ---
 
+## 13 - Automatização de Issue
+### Prompt Utilizado
+```marwdown
+Crie um arquivo .sh com Issue para organizar o meu projeto
+```
+### O que a IA Gerou
+- Crie Issues
+- Minestone
+- Descrição das issues
+
 ## Estatísticas de Uso
 
 | Componente | Gerado por IA | Implementado Manualmente | Criticidade dos Ajustes |
