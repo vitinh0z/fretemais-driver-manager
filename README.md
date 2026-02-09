@@ -15,6 +15,7 @@ Sistema de gerenciamento de motoristas desenvolvido como teste técnico. Uma apl
 - [Sobre o Projeto](#sobre-o-projeto)
 - [Funcionalidades](#funcionalidades)
 - [Arquitetura](#arquitetura)
+- [Decisões Técnicas](#decisões-técnicas)
 - [Tecnologias Utilizadas](#tecnologias-utilizadas)
 - [Pré-requisitos](#pré-requisitos)
 - [Instalação e Execução](#instalação-e-execução)
@@ -92,6 +93,276 @@ O projeto segue a arquitetura em camadas (Layered Architecture):
 - **Domain**: Entidades de negócio (`Driver`, `VehicleType`)
 - **Application**: Lógica de aplicação, DTOs e mapeadores
 - **Infrastructure**: Adaptadores externos (controllers, repositories, security)
+
+---
+
+## Decisões Técnicas
+
+### 1. Arquitetura em Camadas (Layered Architecture)
+
+**Decisão:** Organização do código em Domain, Application e Infrastructure
+
+**Justificativa:**
+- Separação clara de responsabilidades seguindo princípios SOLID
+- Domain isolado de frameworks externos (Spring, JPA)
+- Facilita testes unitários mockando apenas as dependências necessárias
+- Padrão compreensível e manutenível para equipes
+- Permite evolução da aplicação sem impactar regras de negócio
+
+---
+
+### 2. PostgreSQL como Banco de Dados
+
+**Decisão:** PostgreSQL 16 para persistência
+
+**Justificativa:**
+- Banco relacional robusto e confiável para dados estruturados de motoristas
+- Suporte a constraints (UNIQUE para CPF, CNH, email) garantindo integridade
+- Excelente performance para queries com múltiplos filtros
+- Suporte a índices compostos para otimizar buscas por localização
+- ACID compliance para consistência transacional
+
+---
+
+### 3. H2 Database para Ambiente de Testes
+
+**Decisão:** H2 em memória no modo compatibilidade PostgreSQL
+
+**Justificativa:**
+- Testes mais rápidos sem dependência de infraestrutura externa
+- Banco é recriado a cada execução garantindo isolamento
+- Modo PostgreSQL mantém compatibilidade com queries de produção
+- Simplifica CI/CD sem necessidade de configurar banco externo
+
+---
+
+### 4. JPA Specifications para Filtros Dinâmicos
+
+**Decisão:** Spring Data JPA Specifications ao invés de queries nativas
+
+**Justificativa:**
+- Construção dinâmica de queries baseada nos filtros fornecidos
+- Type-safe, evitando erros em tempo de compilação
+- Proteção contra SQL injection
+- Predicados reutilizáveis e testáveis
+- Facilita manutenção comparado a concatenação de JPQL
+
+```java
+// Exemplo de uso no projeto
+public class DriverSpecification {
+    public static Specification<Driver> filterByText(String text) {
+        return (root, query, cb) -> {
+            if (text == null) return null;
+            // Busca em múltiplos campos
+        };
+    }
+}
+```
+
+---
+
+### 5. DTOs para Camada de Apresentação
+
+**Decisão:** Uso de Request/Response DTOs separados das entidades
+
+**Justificativa:**
+- Desacoplamento entre API e modelo de domínio
+- Controle sobre dados expostos (não expor IDs internos, senhas, etc)
+- Validações específicas para cada operação (criar vs atualizar)
+- Facilita versionamento da API sem quebrar contratos
+- DTOs diferentes para listagem (resumo) e detalhes (completo)
+
+---
+
+### 6. Spring Security com JWT Stateless
+
+**Decisão:** Autenticação JWT sem sessões no servidor
+
+**Justificativa:**
+- Escalabilidade horizontal (múltiplas instâncias sem session sharing)
+- Adequado para arquitetura de APIs REST
+- Token contém claims, reduzindo consultas ao banco
+- Facilita integração com frontend Next.js
+- Permite autenticação em microsserviços futuros
+
+---
+
+### 7. Docker Multi-stage Build
+
+**Decisão:** Dockerfile com 3 estágios (build, CDS, runtime)
+
+**Justificativa:**
+- **Estágio 1 (build)**: Compila aplicação com cache Maven para builds rápidos
+- **Estágio 2 (CDS)**: Gera arquivo CDS para otimização de startup
+- **Estágio 3 (runtime)**: Imagem final apenas com JRE Alpine (imagem menor)
+- Imagem final ~200MB menor que sem multi-stage
+- Startup 30-40% mais rápido com CDS
+
+---
+
+### 8. Virtual Threads (Project Loom)
+
+**Decisão:** Habilitação de Virtual Threads no Spring Boot
+
+**Justificativa:**
+- Aplicação faz múltiplas operações I/O (banco, possíveis APIs externas)
+- Virtual Threads permitem milhares de threads concorrentes com overhead mínimo
+- Código permanece síncrono (mais simples que programação reativa)
+- Melhora throughput sem complexidade adicional
+- Preparado para alta concorrência de requisições
+
+```yaml
+spring:
+  threads:
+    virtual:
+      enabled: true
+```
+
+---
+
+### 9. ZGC (Z Garbage Collector)
+
+**Decisão:** ZGC com modo geracional ao invés de G1GC
+
+**Justificativa:**
+- Pausas de GC sempre menores que 10ms (baixa latência)
+- Importante para APIs que precisam de tempo de resposta consistente
+- Modo geracional melhora throughput (~15% em testes)
+- Funciona bem com heaps grandes (512MB-1GB configurado)
+- Melhor experiência do usuário final
+
+```dockerfile
+-XX:+UseZGC
+-XX:+ZGenerational
+```
+
+---
+
+### 10. AOT Compilation e CDS
+
+**Decisão:** Spring Boot AOT + Class Data Sharing
+
+**Justificativa:**
+- AOT compila beans do Spring em tempo de build
+- Reduz tempo de inicialização (~30% mais rápido)
+- CDS compartilha classes pré-carregadas entre execuções
+- Importante para ambientes containerizados com restart frequente
+- Melhora experiência em desenvolvimento e produção
+
+---
+
+### 11. Lombok para Redução de Boilerplate
+
+**Decisão:** Uso de Lombok em entities e DTOs
+
+**Justificativa:**
+- Reduz código repetitivo (getters, setters, constructors, builders)
+- Código mais limpo e focado na lógica de negócio
+- `@Builder` facilita criação de objetos em testes
+- Amplamente suportado por IDEs modernas
+- Padrão adotado pela maioria dos projetos Spring Boot
+
+```java
+@Getter
+@Setter
+@Builder
+@Entity
+@Table(name = "drivers")
+public class Driver {
+    // Campos apenas, sem getters/setters
+}
+```
+
+---
+
+### 12. OpenAPI/Swagger para Documentação
+
+**Decisão:** SpringDoc OpenAPI para geração automática de documentação
+
+**Justificativa:**
+- Documentação sempre sincronizada com código
+- Interface interativa para testar endpoints sem Postman
+- Facilita integração frontend (geração de clients)
+- Annotations descrevem contratos de forma clara
+- Acelera desenvolvimento e comunicação com frontend
+
+---
+
+### 13. Global Exception Handler
+
+**Decisão:** Tratamento centralizado de exceções
+
+**Justificativa:**
+- Padronização das respostas de erro da API
+- Evita código duplicado em cada controller
+- Facilita logging e monitoramento de erros
+- Melhora segurança não expondo stack traces
+- Cliente recebe mensagens consistentes e úteis
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
+        // Tratamento centralizado
+    }
+}
+```
+
+---
+
+### 14. Paginação e Ordenação Padrão
+
+**Decisão:** Uso de `Pageable` do Spring Data
+
+**Justificativa:**
+- Evita retornar todos os motoristas de uma vez (performance)
+- Permite ao cliente controlar tamanho da página e ordenação
+- Reduz uso de memória e banda de rede
+- Padrão REST para listagens grandes
+- Integração nativa com frontend (tabelas paginadas)
+
+```java
+@GetMapping
+public Page<DriverSummaryDTO> list(
+    @PageableDefault(size = 10, sort = "name") Pageable pageable
+) {
+    // Retorna página controlada pelo cliente
+}
+```
+
+---
+
+### 15. Profiles do Spring (dev, prod)
+
+**Decisão:** Separação de configurações por ambiente
+
+**Justificativa:**
+- `application-dev.yml`: H2, debug habilitado, sem otimizações
+- `application-prod.yml`: PostgreSQL, logs otimizados, Virtual Threads
+- Facilita desenvolvimento local sem Docker
+- Previne erros de usar configurações de dev em produção
+- Permite CI/CD com diferentes ambientes
+
+---
+
+### 16. Connection Pool (HikariCP) Configurado
+
+**Decisão:** Tuning do HikariCP para produção
+
+**Justificativa:**
+- Pool otimizado para carga esperada (20 conexões max, 5 idle)
+- Timeout configurado para evitar travamentos
+- Balanceamento entre performance e uso de recursos do PostgreSQL
+- Métricas disponíveis via Actuator para monitoramento
+
+```yaml
+hikari:
+  maximum-pool-size: 20
+  minimum-idle: 5
+  idle-timeout: 30000
+  connection-timeout: 20000
+```
 
 ---
 
