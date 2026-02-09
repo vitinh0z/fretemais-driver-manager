@@ -23,6 +23,7 @@ spring:
       path: /h2-console
 
   jpa:
+    defer-datasource-initialization: true
     hibernate:
       ddl-auto: create-drop
     show-sql: true
