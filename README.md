@@ -2,8 +2,10 @@
 
 Sistema de gerenciamento de motoristas desenvolvido como teste técnico. Uma aplicação full-stack para cadastro, consulta e gerenciamento de motoristas com foco em performance, escalabilidade e boas práticas.
 
-> Senha para acessoar Dashboard:
+> Senha para acessar Dashboard:
+> 
 > username: admin
+> 
 > senha: 123456
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
